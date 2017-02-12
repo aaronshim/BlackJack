@@ -19,10 +19,10 @@ isBlackJack :: Card -> Bool
 isBlackJack (n, suit) = n == 11 && elem suit [Spade, Club]
 
 hasWon :: Hand -> Bool
-hasWon h = (isBlackJack (head h)) || ((sum (map fst h)) == 21)
+hasWon h = (isBlackJack . head) h || (sum . map fst) h == 21
 
 hasLost :: Hand -> Bool
-hasLost h = sum (map fst h) > 21
+hasLost h = (sum . map fst) h > 21
 
 --gameFinished :: State -> Bool
 
