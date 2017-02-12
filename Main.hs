@@ -10,7 +10,11 @@ data GameState = GameState { myHand :: Hand
                            , deck :: Deck
                            } deriving Show
 
---drawFromDeck :: Deck -> IO (Card, Deck)
+--myDrawFromDeck :: GameState -> IO GameState
+myDrawFromDeck = return
+
+--dealerDrawFromDeck :: GameState -> IO GameState
+dealerDrawFromDeck = return
 
 addToHand :: Card -> Hand -> Hand
 addToHand = (:)
@@ -42,12 +46,16 @@ main = do
 
 programLoop :: GameState -> IO ()
 programLoop state = do
-  putStrLn $ "Current state: " ++ (show state)
+  putStrLn $ "\nCurrent state: " ++ (show state)
   -- this is where we do our game calculations
-  let state' = state
-  -- then decide to continue or finish
-  if gameFinished state'
+  putStrLn $ "\nHey you! Your current hand is " ++ (show $ myHand state)
+  putStrLn "(s)top or (d)raw?"  
+  c <- getChar
+  state' <- if c == 'd' then myDrawFromDeck state else return state
+  state'' <- dealerDrawFromDeck state'
+  -- decide whether to continue or not
+  if gameFinished state''
     then do
       putStrLn "We have a winner!"
       putStrLn "Game Finished!"
-    else programLoop state'
+    else programLoop state''
