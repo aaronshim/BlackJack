@@ -28,9 +28,8 @@ hasWon h = and (map (\x -> x $ h) [isBlackJack . head, (==) 21 . sum . map fst])
 hasLost :: Hand -> Bool
 hasLost h = (sum . map fst) h > 21
 
---gameFinished :: State -> Bool
-
-gameFinished _ = True
+gameFinished :: GameState -> Bool
+gameFinished (GameState mh hh _) = (and . concat) (map (\x -> map x [mh, hh]) [hasWon, hasLost])
 
 genInitialState :: GameState
 genInitialState = GameState [] [] genInitialDeck
