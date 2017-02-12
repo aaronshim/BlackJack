@@ -26,6 +26,8 @@ hasLost h = sum (map fst h) > 21
 
 --gameFinished :: State -> Bool
 
+gameFinished _ = True
+
 genInitialState :: GameState
 genInitialState = GameState [] [] genInitialDeck
   where
@@ -34,7 +36,7 @@ genInitialState = GameState [] [] genInitialDeck
 
 main :: IO ()
 main = do
-  putStrLn "Hello, world!"
+  putStrLn "Starting BlackJack!"
   let initialState = genInitialState
   programLoop initialState
 
@@ -44,4 +46,8 @@ programLoop state = do
   -- this is where we do our game calculations
   let state' = state
   -- then decide to continue or finish
-  programLoop state
+  if gameFinished state'
+    then do
+      putStrLn "We have a winner!"
+      putStrLn "Game Finished!"
+    else programLoop state'
