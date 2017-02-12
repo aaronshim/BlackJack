@@ -1,5 +1,6 @@
 
 import qualified Data.Set as S
+import qualified System.Random as R
 
 data Suit = Heart | Spade | Club | Diamond deriving (Show, Ord, Eq)
 type Card = (Integer, Suit)
@@ -10,11 +11,29 @@ data GameState = GameState { myHand :: Hand
                            , deck :: Deck
                            } deriving Show
 
---myDrawFromDeck :: GameState -> IO GameState
-myDrawFromDeck = return
+drawFromDeck :: Deck -> IO (Card, Deck)
+drawFromDeck deck = do
+  i <- R.randomRIO (0, S.size deck)
+  let card = S.elemAt i deck
+  let deck' = S.deleteAt i deck
+  return (card, deck')
 
---dealerDrawFromDeck :: GameState -> IO GameState
-dealerDrawFromDeck = return
+myDrawFromDeck :: GameState -> IO GameState
+myDrawFromDeck state = do
+  (c, d) <- drawFromDeck $ deck state
+  let h' = c `addToHand` (myHand state)
+  return (GameState h' (houseHand state) d)
+
+dealerDrawFromDeck :: GameState -> IO GameState
+dealerDrawFromDeck state = do
+  toDrawOrNot <- R.randomRIO (0,1)
+  if (toDrawOrNot :: Integer) == 1
+    then do
+      (c, d) <- drawFromDeck $ deck state
+      let h' = c `addToHand` (houseHand state)
+      return (GameState (myHand state) h' d)   
+    else
+      return state
 
 addToHand :: Card -> Hand -> Hand
 addToHand = (:)
