@@ -12,11 +12,17 @@ data GameState = GameState { myHand :: Hand
 
 --drawFromDeck :: Deck -> IO (Card, Deck)
 
---addToHand :: Hand -> Card -> Hand
+addToHand :: Card -> Hand -> Hand
+addToHand = (:)
 
---hasWon :: Hand -> Bool
+isBlackJack :: Card -> Bool
+isBlackJack (n, suit) = n == 11 && elem suit [Spade, Club]
 
---hasLost :: Hand -> Bool
+hasWon :: Hand -> Bool
+hasWon h = (isBlackJack (head h)) || ((sum (map fst h)) == 21)
+
+hasLost :: Hand -> Bool
+hasLost h = sum (map fst h) > 21
 
 --gameFinished :: State -> Bool
 
