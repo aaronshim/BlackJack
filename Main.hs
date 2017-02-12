@@ -42,13 +42,13 @@ isBlackJack :: Card -> Bool
 isBlackJack (n, suit) = n == 11 && elem suit [Spade, Club]
 
 hasWon :: Hand -> Bool
-hasWon h = and $ map (\x -> x $ h) [isBlackJack . head, (==) 21 . sum . map fst]
+hasWon h = or $ map (\x -> x $ h) [isBlackJack . head, (==) 21 . sum . map fst]
 
 hasLost :: Hand -> Bool
 hasLost h = (sum . map fst) h > 21
 
 gameFinished :: GameState -> Bool
-gameFinished (GameState mh hh _) = and . concat $ map (\x -> map x [mh, hh]) [hasWon, hasLost]
+gameFinished (GameState mh hh _) = or . concat $ map (\x -> map x [mh, hh]) [hasWon, hasLost]
 
 genInitialState :: GameState
 genInitialState = GameState [] [] genInitialDeck
@@ -67,6 +67,7 @@ programLoop state = do
   putStrLn $ "\nCurrent state: " ++ (show state)
   -- this is where we do our game calculations
   putStrLn $ "\nHey you! Your current hand is " ++ (show $ myHand state)
+  putStrLn $ "Dealer has " ++ (show $ houseHand state)
   putStrLn "(s)top or (d)raw?"  
   c <- getChar
   state' <- if c == 'd' then myDrawFromDeck state else return state
