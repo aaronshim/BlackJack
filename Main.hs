@@ -48,7 +48,10 @@ addToHand = (:)
 
 -- automatic conversion of aces if hand goes over
 convertAce :: Hand -> Card -> Card
-convertAce hand (num, suit) = if num == 14 && (sum $ map fst $ hand) > 7 then (1, suit) else (num, suit)
+convertAce hand (num, suit) =
+  if num == 14 && (sum $ map fst $ hand) > 7
+    then (1, suit)
+    else (num, suit)
 
 -- whether the last card drawn was a blackjack (accounts for NULL/Nothing)
 isBlackJack :: Hand -> Bool
@@ -90,9 +93,9 @@ dealerDrawFromDeck state =
     --  of drawing more cards if the hand is far below 21
     aiFunction h = -(round magicFun) - 1
       where
-        cSum = sum $ map fst $ h
+        hSum = sum $ map fst $ h
         -- numerical computation delta == 0.01 to avoid asymptote at 21
-        magicFun = 441 / ((fromIntegral cSum - 21.01) * (fromIntegral cSum + 21))
+        magicFun = 441 / ((fromIntegral hSum - 21.01) * (fromIntegral hSum + 21))
   in do
     -- we want the AI to be less likely to draw if their hand is too large
     toDrawOrNot <- R.randomRIO (0, aiFunction $ houseHand state) :: IO Integer
