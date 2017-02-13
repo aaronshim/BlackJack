@@ -43,16 +43,6 @@ genInitialState = GameState [] [] genInitialDeck True True
 
 -- GAME LOGIC FUNCTIONS
 
-addToHand :: Card -> Hand -> Hand
-addToHand = (:)
-
--- automatic conversion of aces if hand goes over
-convertAce :: Hand -> Card -> Card
-convertAce hand (num, suit) =
-  if num == 14 && (sum $ map fst $ hand) > 7
-    then (1, suit)
-    else (num, suit)
-
 -- whether the last card drawn was a blackjack (accounts for NULL/Nothing)
 isBlackJack :: Hand -> Bool
 isBlackJack = (maybe False isBlackJack') . maybeHead
@@ -61,6 +51,15 @@ isBlackJack = (maybe False isBlackJack') . maybeHead
 
 handSum :: Hand -> Integer
 handSum = sum . map fst
+
+addToHand :: Card -> Hand -> Hand
+addToHand c h = (convertAce c) : h
+  where
+    -- automatic conversion of aces if hand goes over
+    convertAce (num, suit) =
+      if num == 14 && handSum h > 7
+        then (1, suit)
+        else (num, suit)
 
 hasWon :: Hand -> Bool
 hasWon = \h -> or $ map (\x -> x $ h) [isBlackJack, (==) 21 . handSum]
@@ -83,7 +82,7 @@ drawFromDeck deck = do
 myDrawFromDeck :: GameState -> IO GameState
 myDrawFromDeck state = do
   (c, d) <- drawFromDeck $ deck state
-  let h' = (convertAce (myHand state) c) `addToHand` (myHand state)
+  let h' = c `addToHand` (myHand state)
   return (GameState h' (houseHand state) d (myKeepDrawing state) (houseKeepDrawing state))
 
 dealerDrawFromDeck :: GameState -> IO GameState
@@ -93,7 +92,7 @@ dealerDrawFromDeck state =
     --  of drawing more cards if the hand is far below 21
     aiFunction h = -(round magicFun) - 1
       where
-        hSum = sum $ map fst $ h
+        hSum = handSum h
         -- numerical computation delta == 0.01 to avoid asymptote at 21
         magicFun = 441 / ((fromIntegral hSum - 21.01) * (fromIntegral hSum + 21))
   in do
@@ -102,7 +101,7 @@ dealerDrawFromDeck state =
     if toDrawOrNot == 0 && houseKeepDrawing state
       then do
         (c, d) <- drawFromDeck $ deck state
-        let h' = (convertAce (houseHand state) c) `addToHand` (houseHand state)
+        let h' = c `addToHand` (houseHand state)
         return (GameState (myHand state) h' d (myKeepDrawing state) (houseKeepDrawing state))   
       else
         return (GameState (myHand state) (houseHand state) (deck state) (myKeepDrawing state) False)
@@ -131,7 +130,9 @@ programLoop state = do
       putStrLn "\nWe have a winner!"
       putStrLn $ show state''
       putStrLn "Game Finished!"
-      putStrLn $ "The winner is: " ++ (showWinner state'')
+      putStrLn $ "\nYour current hand is " ++ (showHand $ myHand state'')
+      putStrLn $ "The house's current hand is " ++ (showHand $ houseHand state'')
+      putStrLn $ "\nThe winner is: " ++ (showWinner state'')
     else programLoop state''
 
 main :: IO ()
