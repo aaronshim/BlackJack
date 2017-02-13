@@ -1,7 +1,6 @@
 
 import qualified Data.Set as S
 import qualified System.Random as R
-import qualified Data.Maybe as M
 
 data Suit = Heart | Spade | Club | Diamond deriving (Show, Ord, Eq)
 type Card = (Integer, Suit)
@@ -45,7 +44,7 @@ isBlackJack :: Card -> Bool
 isBlackJack (n, suit) = n == 11 && elem suit [Spade, Club]
 
 hasWon :: Hand -> Bool
-hasWon h = or $ map (\x -> M.fromMaybe False $ x $ h) [(fmap isBlackJack) . maybeHead, Just . (==) 21 . sum . map fst]
+hasWon h = or $ map (\x -> x $ h) [(maybe False isBlackJack) . maybeHead, (==) 21 . sum . map fst]
   where
     maybeHead [] = Nothing
     maybeHead x = (Just . head) x
