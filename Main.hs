@@ -13,52 +13,44 @@ data GameState = GameState { myHand :: Hand
                            , houseKeepDrawing :: Bool
                            } deriving Show
 
-drawFromDeck :: Deck -> IO (Card, Deck)
-drawFromDeck deck = do
-  i <- R.randomRIO (0, S.size deck - 1)
-  let card = S.elemAt i deck
-  let deck' = S.deleteAt i deck
-  return (card, deck')
+-- HELPER FUNCTION
+-- safe version of head that accounts for NULL (Nothing)
+maybeHead :: [a] -> Maybe a
+maybeHead [] = Nothing
+maybeHead (x:xs) = Just x
+
+-- DISPLAY FUNCTION
+showHand :: Hand -> String
+showHand h = (show h) ++ "\t(" ++ (show $ handSum h) ++ ")"
+
+-- DISPLAY FUNCTION
+-- assumes that the game has finished
+showWinner :: GameState -> String
+showWinner (GameState mh hh _ _ _)
+  | isBlackJack hh                         = "House"
+  | isBlackJack mh                         = "You!"
+  | handSum mh > 21                        = "House"
+  | handSum hh > 21                        = "You!"
+  | (21 - handSum hh) <= (21 - handSum mh) = "House"
+  | otherwise                              = "You!"
+
+-- SETUP FUNCTION
+genInitialState :: GameState
+genInitialState = GameState [] [] genInitialDeck True True
+  where
+    genInitialDeck = S.fromList cardsList
+    cardsList = concat $ map (\c -> map (\n -> (n, c)) [2..14]) [Heart, Spade, Club, Diamond]
+
+-- GAME LOGIC FUNCTIONS
+
+addToHand :: Card -> Hand -> Hand
+addToHand = (:)
 
 -- automatic conversion of aces if hand goes over
 convertAce :: Hand -> Card -> Card
 convertAce hand (num, suit) = if num == 14 && (sum $ map fst $ hand) > 7 then (1, suit) else (num, suit)
 
-myDrawFromDeck :: GameState -> IO GameState
-myDrawFromDeck state = do
-  (c, d) <- drawFromDeck $ deck state
-  let h' = (convertAce (myHand state) c) `addToHand` (myHand state)
-  return (GameState h' (houseHand state) d (myKeepDrawing state) (houseKeepDrawing state))
-
-aiFunction :: Hand -> Integer
-aiFunction h =
-  let
-    cSum = sum $ map fst $ h
-    -- numerical computation delta == 0.01 to avoid asymptote at 21
-    magicFun = 441 / ((fromIntegral cSum - 21.01) * (fromIntegral cSum + 21))
-  in
-    -(round magicFun) - 1
-
-
-dealerDrawFromDeck :: GameState -> IO GameState
-dealerDrawFromDeck state = do
-  -- we want the AI to be less likely to draw if their hand is too large
-  toDrawOrNot <- R.randomRIO (0, aiFunction $ houseHand state)
-  if toDrawOrNot == 0 && houseKeepDrawing state
-    then do
-      (c, d) <- drawFromDeck $ deck state
-      let h' = (convertAce (houseHand state) c) `addToHand` (houseHand state)
-      return (GameState (myHand state) h' d (myKeepDrawing state) (houseKeepDrawing state))   
-    else
-      return (GameState (myHand state) (houseHand state) (deck state) (myKeepDrawing state) False)
-
-maybeHead :: [a] -> Maybe a
-maybeHead [] = Nothing
-maybeHead (x:xs) = Just x
-
-addToHand :: Card -> Hand -> Hand
-addToHand = (:)
-
+-- whether the last card drawn was a blackjack (accounts for NULL/Nothing)
 isBlackJack :: Hand -> Bool
 isBlackJack = (maybe False isBlackJack') . maybeHead
   where
@@ -76,30 +68,41 @@ hasLost = ((> 21) . handSum)
 gameFinished :: GameState -> Bool
 gameFinished (GameState mh hh _ mk hk) = or $ ((:) $ not (mk || hk)) $ concat $ map (\x -> map x [mh, hh]) [hasWon, hasLost]
 
--- assumes that the game has finished
-showWinner :: GameState -> String
-showWinner (GameState mh hh _ _ _)
-  | isBlackJack hh                         = "House"
-  | isBlackJack mh                         = "You!"
-  | handSum mh > 21                        = "House"
-  | handSum hh > 21                        = "You!"
-  | (21 - handSum hh) <= (21 - handSum mh) = "House"
-  | otherwise                              = "You!"
+-- IO FUNCTIONS (USER INPUT/RANDOM GEN/GAME LOOP)
 
-genInitialState :: GameState
-genInitialState = GameState [] [] genInitialDeck True True
-  where
-    genInitialDeck = S.fromList cardsList
-    cardsList = concat $ map (\c -> map (\n -> (n, c)) [2..14]) [Heart, Spade, Club, Diamond]
+drawFromDeck :: Deck -> IO (Card, Deck)
+drawFromDeck deck = do
+  i <- R.randomRIO (0, S.size deck - 1)
+  let card = S.elemAt i deck
+  let deck' = S.deleteAt i deck
+  return (card, deck')
 
-showHand :: Hand -> String
-showHand h = (show h) ++ "\t(" ++ (show $ handSum h) ++ ")"
+myDrawFromDeck :: GameState -> IO GameState
+myDrawFromDeck state = do
+  (c, d) <- drawFromDeck $ deck state
+  let h' = (convertAce (myHand state) c) `addToHand` (myHand state)
+  return (GameState h' (houseHand state) d (myKeepDrawing state) (houseKeepDrawing state))
 
-main :: IO ()
-main = do
-  putStrLn "Starting BlackJack!"
-  let initialState = genInitialState
-  programLoop initialState
+dealerDrawFromDeck :: GameState -> IO GameState
+dealerDrawFromDeck state =
+  let
+    -- define our AI Behavior using a function that will have higher chances
+    --  of drawing more cards if the hand is far below 21
+    aiFunction h = -(round magicFun) - 1
+      where
+        cSum = sum $ map fst $ h
+        -- numerical computation delta == 0.01 to avoid asymptote at 21
+        magicFun = 441 / ((fromIntegral cSum - 21.01) * (fromIntegral cSum + 21))
+  in do
+    -- we want the AI to be less likely to draw if their hand is too large
+    toDrawOrNot <- R.randomRIO (0, aiFunction $ houseHand state) :: IO Integer
+    if toDrawOrNot == 0 && houseKeepDrawing state
+      then do
+        (c, d) <- drawFromDeck $ deck state
+        let h' = (convertAce (houseHand state) c) `addToHand` (houseHand state)
+        return (GameState (myHand state) h' d (myKeepDrawing state) (houseKeepDrawing state))   
+      else
+        return (GameState (myHand state) (houseHand state) (deck state) (myKeepDrawing state) False)
 
 programLoop :: GameState -> IO ()
 programLoop state = do
@@ -127,3 +130,9 @@ programLoop state = do
       putStrLn "Game Finished!"
       putStrLn $ "The winner is: " ++ (showWinner state'')
     else programLoop state''
+
+main :: IO ()
+main = do
+  putStrLn "Starting BlackJack!"
+  let initialState = genInitialState
+  programLoop initialState
