@@ -115,8 +115,8 @@ programLoop state = do
   state' <- if myKeepDrawing state
               then do
                 putStrLn "(s)top or (d)raw?"  
-                c <- getChar
-                if c == 'd'
+                c <- getLine
+                if c == "d"
                   then
                     myDrawFromDeck state
                   else
