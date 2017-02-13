@@ -44,7 +44,7 @@ isBlackJack :: Card -> Bool
 isBlackJack (n, suit) = n == 11 && elem suit [Spade, Club]
 
 hasWon :: Hand -> Bool
-hasWon h = or $ map (\x -> x $ h) [(maybe False isBlackJack) . maybeHead, (==) 21 . sum . map fst]
+hasWon = \h -> or $ map (\x -> x $ h) [(maybe False isBlackJack) . maybeHead, (==) 21 . sum . map fst]
   where
     maybeHead [] = Nothing
     maybeHead x = (Just . head) x
